@@ -1,6 +1,14 @@
 from random import choice, randint
 
 import pygame
+import datetime
+
+# Рекорд прошлых игр:
+try:
+    with open('records.txt', 'r', encoding='UTF-8') as file:
+        RECORD = int(file.readline().strip())
+except (FileNotFoundError, ValueError):
+    RECORD = 0
 
 # Константы для размеров поля и сетки:
 SCREEN_WIDTH, SCREEN_HEIGHT = 640, 480
@@ -33,7 +41,7 @@ SPEED = 5
 screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT), 0, 32)
 
 # Заголовок окна игрового поля:
-pygame.display.set_caption('Змейка')
+pygame.display.set_caption(f'Змейка Максимальный рекорд: {RECORD}')
 
 # Настройка времени:
 clock = pygame.time.Clock()
@@ -177,10 +185,15 @@ def handle_keys(game_object):
     :param game_object: Игровой объект(класс)
     """
     for event in pygame.event.get():
+
         if event.type == pygame.QUIT:
             pygame.quit()
             raise SystemExit
+
         elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                raise SystemExit
             if event.key == pygame.K_UP and game_object.direction != DOWN:
                 game_object.next_direction = UP
             elif event.key == pygame.K_DOWN and game_object.direction != UP:
@@ -191,8 +204,31 @@ def handle_keys(game_object):
                 game_object.next_direction = RIGHT
 
 
+def set_max_record(game_object, current_record: int) -> int:
+    """
+    Возвращает максимальную длину змейки и записывает рекорд в файл
+
+    :param game_object: Экземпляр змейки
+    :param current_record: Текущий рекорд в игре
+    :type current_record: int
+    :return: Возвращает старый(если не был побит) или новый рекорд
+    :rtype: int
+    """
+    if game_object.length > current_record:
+        current_record = game_object.length
+
+        with open('records.txt', 'w', encoding='UTF-8') as file:
+            file.write(str(current_record) + '\n')
+            file.write(f'Новый рекорд был установлен {datetime.datetime.now()}.'
+                       f'Длина змейки была равна {current_record}!\n'
+            )
+        pygame.display.set_caption(f'Змейка Максимальный рекорд: {current_record}')
+    return current_record
+
+
 def main():
     """Главная логика игры"""
+    global RECORD
     pygame.init()
     apple = Apple()
     snake = Snake()
@@ -209,6 +245,7 @@ def main():
                 apple.position = apple.randomize_position()
 
         if snake.positions[0] in snake.positions[1:]:
+            RECORD = set_max_record(snake, RECORD)
             snake.reset()
             screen.fill(BOARD_BACKGROUND_COLOR)
 
@@ -219,3 +256,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# Для запуска виртуального окружения в powershell для начала нужно выполнить это:
+# Set-ExecutionPolicy -Scope Process -ExecutionPolicy RemoteSigned
